@@ -1,49 +1,48 @@
+import os
 from PySide6.QtCore import QObject, Signal, QDir
 
 class Folder_size_calc(QObject):
-    progress = Signal(str, int)
-    finish = Signal(str, int)
-    error = Signal(str)
+    calculated = Signal(str, str)
 
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self._is_running = False
+    def __init__(self):
+        super().__init__()
+        self._active = True
+        self._current_path = None
 
-    def calculate(self, path):
-        if self._is_running:
-            self.error.emit("Расчет уже выполняется")
+    def calculate_size(self, path):
+        if not self._active or not path:
             return
 
-        self._is_running = True
+        self._current_path = path
         try:
-            total = self._calculate_rec(path)
-            self.finish.emit(path, total)
+            total_size = 0
+
+            real_path = os.path.realpath(path) if os.path.islink(path) else path
+
+            for dirpath, _, filenames in os.walk(real_path):
+                if not self._active or self._current_path != path:
+                    return
+                for f in filenames:
+                    try:
+                        fp = os.path.join(dirpath, f)
+                        if not os.path.islink(fp):
+                            total_size += os.path.getsize(fp)
+                    except (OSError, PermissionError):
+                        continue
+
+            if self._active and self._current_path == path:
+                self.calculated.emit(path, self.format_size(total_size))
         except Exception as e:
-            self.error.emit(f"Ошибка расчета: {str(e)}")
-        finally:
-            self._is_running = False
+            print(f"Ошибка при расчете размера для {path}: {str(e)}")
+            self.calculated.emit(path, "Ошибка")
 
-    def _calculate_rec(self, path):
-        total = 0
-        dir_iterator = QDir(path).entryInfoList(
-            QDir.Files | QDir.Dirs | QDir.NoDotAndDotDot,
-            QDir.Name | QDir.IgnoreCase
-        )
+    def format_size(self, bytes):
+        for unit in ['B', 'KB', 'MB', 'GB', 'TB']:
+            if bytes < 1024:
+                return f"{bytes:.1f} {unit}"
+            bytes /= 1024
+        return f"{bytes:.1f} PB"
 
-        for d in dir_iterator:
-            if not self._is_running:
-                break
-
-            if d.isDir():
-                dir_size = self._calculate_rec(d.filePath())
-                total += dir_size
-            else:
-                total += d.size()
-
-            if dir_iterator.index(d) % 10 == 0:
-                self.progress.emit(d.filePath(), total)
-
-        return total
-
-    def cancel(self):
-        self._is_running = False
+    def stop(self):
+        self._active = False
+        self._current_path = None

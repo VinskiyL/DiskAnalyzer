@@ -1,14 +1,36 @@
-import sys
 import os
-from PySide6.QtWidgets import QApplication, QMainWindow, QFileSystemModel, QMessageBox
-from PySide6.QtCore import QDir, Qt, QSortFilterProxyModel
-from ui_form import Ui_MainWindow
+import sys
 import psutil
+from PySide6.QtCore import QThread, Signal, QObject, Qt, QDir, QTimer, QSortFilterProxyModel
+from PySide6.QtWidgets import QApplication, QMainWindow, QFileSystemModel, QMessageBox
+from ui_form import Ui_MainWindow
+from Folder_size_calc import Folder_size_calc
+
+class ThreadCalculator(QThread):
+    task_added = Signal(str)
+
+    def __init__(self):
+        super().__init__()
+        self.worker = Folder_size_calc()
+        self.worker.moveToThread(self)
+        self.task_added.connect(self.worker.calculate_size)
+        self.start()
+
+    def add_task(self, path):
+        self.task_added.emit(path)
+
+    def stop(self):
+        self.worker.stop()
+        self.quit()
+        self.wait()
 
 class DriveInfoProxyModel(QSortFilterProxyModel):
     def __init__(self, drives=None, parent=None):
         super().__init__(parent)
         self.drives = drives or []
+        self.size_cache = {}
+        self.calculator = ThreadCalculator()
+        self.calculator.worker.calculated.connect(self.update_size)
 
     def data(self, index, role=Qt.DisplayRole):
         if index.column() == 1 and role == Qt.DisplayRole:
@@ -20,17 +42,27 @@ class DriveInfoProxyModel(QSortFilterProxyModel):
                     usage = psutil.disk_usage(path)
                     used = self.format_size(usage.used)
                     total = self.format_size(usage.total)
-                    return f"Использовано {used}/{total}({usage.percent}%)"
+                    return f"Используется {used}/{total}({usage.percent}%)"
                 except Exception:
                     return "Ошибка"
 
+            if os.path.isdir(path) or os.path.islink(path):
+                if path in self.size_cache:
+                    return self.size_cache[path]
+                else:
+                    QTimer.singleShot(0, lambda p=path: self.calculator.add_task(p))
+                    return "Вычисление..."
+
         return super().data(index, role)
 
-    def flags(self, index):
-        flags = super().flags(index)
-        if index.column() == 1:
-            flags &= ~Qt.ItemIsUserCheckable
-        return flags
+    def update_size(self, path, size):
+        if path not in self.size_cache or self.size_cache[path] != size:
+            self.size_cache[path] = size
+            root_index = self.sourceModel().index(path)
+            if root_index.isValid():
+                proxy_index = self.mapFromSource(root_index)
+                if proxy_index.isValid():
+                    self.dataChanged.emit(proxy_index, proxy_index, [Qt.DisplayRole])
 
     def format_size(self, bytes):
         for unit in ['B', 'KB', 'MB', 'GB', 'TB']:
@@ -49,13 +81,16 @@ class MainWindow(QMainWindow):
 
         self.file_model = QFileSystemModel()
         self.file_model.setRootPath("")
+        self.file_model.setReadOnly(True)
 
         self.proxy_model = DriveInfoProxyModel(self.drives)
         self.proxy_model.setSourceModel(self.file_model)
 
         self.ui.treeView.setModel(self.proxy_model)
-        self.ui.treeView.clicked.connect(self.on_item_clicked)
 
+        self.show_drives()
+
+        self.ui.treeView.clicked.connect(self.on_item_clicked)
         self.ui.treeView.setColumnWidth(1, 270)
 
     def load_drives(self):
@@ -74,12 +109,20 @@ class MainWindow(QMainWindow):
             QMessageBox.critical(self, "Ошибка", f"Не удалось загрузить диски: {str(e)}")
             return []
 
+    def show_drives(self):
+        root_index = self.proxy_model.mapFromSource(self.file_model.index(""))
+        self.ui.treeView.setRootIndex(root_index)
+
     def on_item_clicked(self, index):
-        path = self.file_model.filePath(index)
+        path = self.file_model.filePath(self.proxy_model.mapToSource(index))
         self.statusBar().showMessage(f"Выбрано: {path}")
 
+        if path in self.drives:
+            self.ui.treeView.setRootIndex(index)
 
-
+    def closeEvent(self, event):
+        self.proxy_model.calculator.stop()
+        super().closeEvent(event)
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
