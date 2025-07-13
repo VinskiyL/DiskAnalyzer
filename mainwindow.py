@@ -2,9 +2,39 @@ import os
 import sys
 import psutil
 from PySide6.QtCore import QThread, Signal, QObject, Qt, QDir, QTimer, QSortFilterProxyModel
-from PySide6.QtWidgets import QApplication, QMainWindow, QFileSystemModel, QMessageBox
+from PySide6.QtWidgets import QApplication, QMainWindow, QFileSystemModel, QMessageBox, QVBoxLayout
 from ui_form import Ui_MainWindow
 from Folder_size_calc import Folder_size_calc
+from PySide6.QtCharts import QChart, QChartView, QPieSeries, QPieSlice
+from PySide6.QtGui import QPainter, QColor
+
+class DiskUsageChart(QChartView):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.chart = QChart()
+        self.chart.setTitle("Использование дисков")
+        self.setChart(self.chart)
+        self.setRenderHint(QPainter.Antialiasing)
+        self.series = QPieSeries()
+        self.chart.addSeries(self.series)
+        self.chart.legend().setVisible(True)
+
+    def update_chart(self, drives):
+        self.series.clear()
+
+        for drive in drives:
+            try:
+                usage = psutil.disk_usage(drive)
+                slice_ = self.series.append(f"{drive} ({usage.percent}%)", usage.percent)
+
+                red = min(255, int(255 * (usage.percent / 100)))
+                green = max(0, int(255 * (1 - usage.percent / 100)))
+                slice_.setColor(QColor(red, green, 0))
+
+                slice_.setLabelVisible(True)
+
+            except Exception as e:
+                print(f"Ошибка обновления диаграммы для {drive}: {e}")
 
 class ThreadCalculator(QThread):
     task_added = Signal(str)
@@ -42,6 +72,8 @@ class DriveInfoProxyModel(QSortFilterProxyModel):
                     usage = psutil.disk_usage(path)
                     used = self.format_size(usage.used)
                     total = self.format_size(usage.total)
+
+
                     return f"Используется {used}/{total}({usage.percent}%)"
                 except Exception:
                     return "Ошибка"
@@ -52,6 +84,20 @@ class DriveInfoProxyModel(QSortFilterProxyModel):
                 else:
                     QTimer.singleShot(0, lambda p=path: self.calculator.add_task(p))
                     return "Вычисление..."
+
+        if role == Qt.BackgroundRole and index.column() == 0:
+            source_index = self.mapToSource(index)
+            path = self.sourceModel().filePath(source_index)
+
+            if path in self.drives:
+                try:
+                    usage = psutil.disk_usage(path)
+
+                    red = min(255, int(255 * (usage.percent / 100)))
+                    green = max(0, int(255 * (1 - usage.percent / 100)))
+                    return QColor(red, green, 0)
+                except Exception:
+                    return None
 
         return super().data(index, role)
 
@@ -93,6 +139,9 @@ class MainWindow(QMainWindow):
         self.ui.treeView.clicked.connect(self.on_item_clicked)
         self.ui.treeView.setColumnWidth(1, 270)
 
+        self.setup_chart()
+        self.update_chart()
+
     def load_drives(self):
         try:
             return [
@@ -117,12 +166,20 @@ class MainWindow(QMainWindow):
         path = self.file_model.filePath(self.proxy_model.mapToSource(index))
         self.statusBar().showMessage(f"Выбрано: {path}")
 
-        if path in self.drives:
-            self.ui.treeView.setRootIndex(index)
-
     def closeEvent(self, event):
         self.proxy_model.calculator.stop()
         super().closeEvent(event)
+
+    def setup_chart(self):
+        self.chart_view = DiskUsageChart()
+        layout = self.ui.graphicsView.layout() or QVBoxLayout()
+        layout.addWidget(self.chart_view)
+        self.ui.graphicsView.setLayout(layout)
+
+    def update_chart(self):
+        if hasattr(self, 'chart_view'):
+            self.chart_view.update_chart(self.drives)
+
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
