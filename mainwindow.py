@@ -1,8 +1,10 @@
 import os
 import sys
 import psutil
+import shutil
 from PySide6.QtCore import QThread, Signal, QObject, Qt, QDir, QTimer, QSortFilterProxyModel
-from PySide6.QtWidgets import QApplication, QMainWindow, QFileSystemModel, QMessageBox, QVBoxLayout
+from PySide6.QtWidgets import (QApplication, QMainWindow, QFileSystemModel, QMessageBox,
+                              QVBoxLayout, QInputDialog)
 from ui_form import Ui_MainWindow
 from Folder_size_calc import Folder_size_calc
 from PySide6.QtCharts import QChart, QChartView, QPieSeries, QPieSlice
@@ -127,7 +129,7 @@ class MainWindow(QMainWindow):
 
         self.file_model = QFileSystemModel()
         self.file_model.setRootPath("")
-        self.file_model.setReadOnly(True)
+        self.file_model.setReadOnly(False)
 
         self.proxy_model = DriveInfoProxyModel(self.drives)
         self.proxy_model.setSourceModel(self.file_model)
@@ -141,6 +143,11 @@ class MainWindow(QMainWindow):
 
         self.setup_chart()
         self.update_chart()
+
+        self.current_selection = None
+        self.ui.treeView.selectionModel().selectionChanged.connect(self.update_delete_button_state)
+        self.ui.deleteButton.clicked.connect(self.delete_selected_item)
+        self.ui.deleteButton.setEnabled(False)
 
     def load_drives(self):
         try:
@@ -165,6 +172,7 @@ class MainWindow(QMainWindow):
     def on_item_clicked(self, index):
         path = self.file_model.filePath(self.proxy_model.mapToSource(index))
         self.statusBar().showMessage(f"Выбрано: {path}")
+        self.current_selection = path
 
     def closeEvent(self, event):
         self.proxy_model.calculator.stop()
@@ -179,6 +187,36 @@ class MainWindow(QMainWindow):
     def update_chart(self):
         if hasattr(self, 'chart_view'):
             self.chart_view.update_chart(self.drives)
+
+    def update_delete_button_state(self):
+        selected = self.ui.treeView.selectionModel().selectedIndexes()
+        self.ui.deleteButton.setEnabled(len(selected) > 0)
+
+    def delete_selected_item(self):
+        if not self.current_selection:
+            return
+
+        reply = QMessageBox.question(
+            self, 'Подтверждение удаления',
+            f'Вы уверены, что хотите удалить "{os.path.basename(self.current_selection)}"?',
+            QMessageBox.Yes | QMessageBox.No, QMessageBox.No
+        )
+
+        if reply == QMessageBox.Yes:
+            try:
+                if os.path.isdir(self.current_selection):
+                    shutil.rmtree(self.current_selection)
+                else:
+                    os.remove(self.current_selection)
+
+                    parent_dir = os.path.dirname(self.current_selection)
+                    parent_index = self.file_model.index(parent_dir)
+
+                    self.file_model.setRootPath("")
+
+                QMessageBox.information(self, "Успех", "Удаление завершено успешно")
+            except Exception as e:
+                QMessageBox.critical(self, "Ошибка", f"Не удалось удалить: {str(e)}")
 
 
 if __name__ == "__main__":

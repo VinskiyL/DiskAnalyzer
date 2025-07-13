@@ -14,7 +14,7 @@
    <string>Анализатор использования дисков</string>
   </property>
   <widget class="QWidget" name="centralwidget">
-   <layout class="QHBoxLayout" name="horizontalLayout">
+   <layout class="QVBoxLayout" name="verticalLayout_2">
     <property name="spacing">
      <number>1</number>
     </property>
@@ -34,19 +34,34 @@
      <number>1</number>
     </property>
     <item>
-     <widget class="QTreeView" name="treeView">
-      <property name="autoFillBackground">
-       <bool>true</bool>
+     <layout class="QHBoxLayout" name="horizontalLayout_2">
+      <property name="spacing">
+       <number>1</number>
       </property>
-     </widget>
+      <property name="leftMargin">
+       <number>0</number>
+      </property>
+      <property name="topMargin">
+       <number>0</number>
+      </property>
+      <property name="rightMargin">
+       <number>0</number>
+      </property>
+      <property name="bottomMargin">
+       <number>0</number>
+      </property>
+      <item>
+       <widget class="QTreeView" name="treeView"/>
+      </item>
+      <item>
+       <widget class="QGraphicsView" name="graphicsView"/>
+      </item>
+     </layout>
     </item>
     <item>
-     <widget class="QGraphicsView" name="graphicsView">
-      <property name="enabled">
-       <bool>true</bool>
-      </property>
-      <property name="autoFillBackground">
-       <bool>true</bool>
+     <widget class="QPushButton" name="deleteButton">
+      <property name="text">
+       <string>Удалить</string>
       </property>
      </widget>
     </item>
