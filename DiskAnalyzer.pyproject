@@ -2,6 +2,9 @@
     "files": [
         "mainwindow.py",
         "form.ui",
-        "Folder_size_calc.py"
+        "Folder_size_calc.py",
+        "dialog.ui",
+        "Disk_cleanup_dialog.py",
+        "ThreadCalculator.py"
     ]
 }

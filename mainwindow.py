@@ -2,13 +2,14 @@ import os
 import sys
 import psutil
 import shutil
-from PySide6.QtCore import QThread, Signal, QObject, Qt, QDir, QTimer, QSortFilterProxyModel
+from PySide6.QtCore import Qt, QTimer, QSortFilterProxyModel
 from PySide6.QtWidgets import (QApplication, QMainWindow, QFileSystemModel, QMessageBox,
-                              QVBoxLayout, QInputDialog)
+                              QVBoxLayout)
 from ui_form import Ui_MainWindow
-from Folder_size_calc import Folder_size_calc
-from PySide6.QtCharts import QChart, QChartView, QPieSeries, QPieSlice
+from PySide6.QtCharts import QChart, QChartView, QPieSeries
 from PySide6.QtGui import QPainter, QColor
+from ThreadCalculator import ThreadCalculator
+from Disk_cleanup_dialog import DiskCleanupDialog
 
 class DiskUsageChart(QChartView):
     def __init__(self, parent=None):
@@ -37,24 +38,6 @@ class DiskUsageChart(QChartView):
 
             except Exception as e:
                 print(f"Ошибка обновления диаграммы для {drive}: {e}")
-
-class ThreadCalculator(QThread):
-    task_added = Signal(str)
-
-    def __init__(self):
-        super().__init__()
-        self.worker = Folder_size_calc()
-        self.worker.moveToThread(self)
-        self.task_added.connect(self.worker.calculate_size)
-        self.start()
-
-    def add_task(self, path):
-        self.task_added.emit(path)
-
-    def stop(self):
-        self.worker.stop()
-        self.quit()
-        self.wait()
 
 class DriveInfoProxyModel(QSortFilterProxyModel):
     def __init__(self, drives=None, parent=None):
@@ -149,6 +132,56 @@ class MainWindow(QMainWindow):
         self.ui.deleteButton.clicked.connect(self.delete_selected_item)
         self.ui.deleteButton.setEnabled(False)
 
+        self.disks_to_clean = []
+        self.current_cleanup_dialog = None
+
+    def check_disks_usage(self):
+        self.disks_to_clean = [
+            drive for drive in self.drives
+            if self.is_disk_almost_full(drive)
+        ]
+
+        if self.disks_to_clean:
+            self.safe_stop_calculator()
+            self.start_cleanup_process()
+
+    def safe_stop_calculator(self):
+        if hasattr(self.proxy_model, 'calculator'):
+            self.proxy_model.calculator.stop(500)
+
+    def is_disk_almost_full(self, drive_path):
+        try:
+            usage = psutil.disk_usage(drive_path)
+            return usage.percent >= 50 #для теста
+        except Exception:
+            return False
+
+    def start_cleanup_process(self):
+        drive = self.disks_to_clean.pop(0)
+        self.show_cleanup_dialog(drive)
+
+    def show_cleanup_dialog(self, drive_path):
+        self.current_cleanup_dialog = DiskCleanupDialog(drive_path, self)
+        self.current_cleanup_dialog.dialog_finished.connect( self.on_cleanup_dialog_closed)
+        self.current_cleanup_dialog.show()
+
+    def on_cleanup_dialog_closed(self):
+        self.current_cleanup_dialog = None
+        if self.disks_to_clean:
+            QTimer.singleShot(500, self.start_cleanup_process)
+        else:
+            self.update_system_info()
+
+    def showEvent(self, event):
+        super().showEvent(event)
+        QTimer.singleShot(1000, self.check_disks_usage)
+
+    def update_system_info(self):
+        self.file_model.setRootPath("")
+        self.update_chart()
+        self.proxy_model.calculator = ThreadCalculator()
+        self.proxy_model.size_cache = {}
+
     def load_drives(self):
         try:
             return [
@@ -208,9 +241,6 @@ class MainWindow(QMainWindow):
                     shutil.rmtree(self.current_selection)
                 else:
                     os.remove(self.current_selection)
-
-                    parent_dir = os.path.dirname(self.current_selection)
-                    parent_index = self.file_model.index(parent_dir)
 
                     self.file_model.setRootPath("")
 
