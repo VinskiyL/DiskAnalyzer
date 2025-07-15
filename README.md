@@ -1,10 +1,6 @@
-Команда для подключения
-
-sudo curl -o /etc/yum.repos.d/disk-analyzer.repo https://github.com/VinskiyL/DiskAnalyzer/master/disk-analyzer.repo
-    
 Команда для установки
 
-sudo dnf install disk-analyzer
+sudo dnf install https://github.com/VinskiyL/DiskAnalyzer/releases/download/v1.0/disk-analyzer-1.0-1.red80.noarch.rpm
 
 Рисунок 1: Главное окно
 ![Главное окно](main_window.png)
