@@ -1,5 +1,5 @@
 [disk-analyzer]
 name=DiskAnalyzer
-baseurl=https://github.com/VinskiyL/DiskAnalyzer/releases/tag/v1.0/
+baseurl=https://github.com/VinskiyL/DiskAnalyzer/releases/download/v1.0/disk-analyzer-1.0-1.red80.noarch.rpm
 enabled=1
 gpgcheck=0
