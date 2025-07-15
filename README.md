@@ -1,3 +1,6 @@
+Команда для подключения
+sudo curl -o /etc/yum.repos.d/disk-analyzer.repo \
+    https://raw.githubusercontent.com/VinskiyL/DiskAnalyzer/master/disk-analyzer.repo
 Рисунок 1: Главное окно
 ![Главное окно](main_window.png)
 Рисунок 2: Окно очистки
