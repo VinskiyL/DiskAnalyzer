@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=DiskAnalyzer
+Comment=Анализатор использования дисков
+Exec=/usr/bin/disk-analyzer
+Icon=disk-analyzer
+Terminal=false
+Type=Application
+Categories=Utility;System;Filesystem;
+StartupWMClass=mainwindow

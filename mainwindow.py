@@ -178,9 +178,12 @@ class MainWindow(QMainWindow):
 
     def update_system_info(self):
         self.file_model.setRootPath("")
-        self.update_chart()
+        self.proxy_model.size_cache.clear()
+
         self.proxy_model.calculator = ThreadCalculator()
-        self.proxy_model.size_cache = {}
+        self.proxy_model.calculator.worker.calculated.connect(self.proxy_model.update_size)
+
+        self.update_chart()
 
     def load_drives(self):
         try:
