@@ -1,5 +1,0 @@
-[disk-analyzer]
-name=DiskAnalyzer
-baseurl=https://release-assets.githubusercontent.com/github-production-release-asset/1009135411/86b35b55-898f-4a5c-bc55-0a0029193132?sp=r&sv=2018-11-09&sr=b&spr=https&se=2025-07-15T22%3A11%3A11Z&rscd=attachment%3B+filename%3Ddisk-analyzer-1.0-1.red80.noarch.rpm&rsct=application%2Foctet-stream&skoid=96c2d410-5711-43a1-aedd-ab1947aa7ab0&sktid=398a6654-997b-47e9-b12b-9515b896b4de&skt=2025-07-15T21%3A10%3A20Z&ske=2025-07-15T22%3A11%3A11Z&sks=b&skv=2018-11-09&sig=eA8kirEOg3aTH5M3KMssBx7HZt0MC5Zfcz7gadDsgAw%3D&jwt=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJnaXRodWIuY29tIiwiYXVkIjoicmVsZWFzZS1hc3NldHMuZ2l0aHVidXNlcmNvbnRlbnQuY29tIiwia2V5Ijoia2V5MSIsImV4cCI6MTc1MjYxNTcxNywibmJmIjoxNzUyNjE1NDE3LCJwYXRoIjoicmVsZWFzZWFzc2V0cHJvZHVjdGlvbi5ibG9iLmNvcmUud2luZG93cy5uZXQifQ.CkMQ6q5h7V77c8qOLgJvOCzydHKwbRVcD4XlWyl2vYM&response-content-disposition=attachment%3B%20filename%3Ddisk-analyzer-1.0-1.red80.noarch.rpm&response-content-type=application%2Foctet-stream
-enabled=1
-gpgcheck=0
