@@ -1,7 +1,6 @@
 Команда для подключения
 
-sudo curl -o /etc/yum.repos.d/disk-analyzer.repo \
-    https://github.com/VinskiyL/DiskAnalyzer/blob/master/disk-analyzer.repo
+sudo curl -o /etc/yum.repos.d/disk-analyzer.repo https://github.com/VinskiyL/DiskAnalyzer/master/disk-analyzer.repo
     
 Команда для установки
 
