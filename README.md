@@ -1,8 +1,8 @@
 Команда для подключения
 
 sudo curl -o /etc/yum.repos.d/disk-analyzer.repo \
-    https://raw.githubusercontent.com/VinskiyL/DiskAnalyzer/master/disk-analyzer.repo
-
+    https://github.com/VinskiyL/DiskAnalyzer/blob/master/disk-analyzer.repo
+    
 Команда для установки
 
 sudo dnf install disk-analyzer
