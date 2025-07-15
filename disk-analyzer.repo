@@ -1,5 +1,5 @@
 [disk-analyzer]
 name=DiskAnalyzer
-baseurl=https://github.com/VinskiyL/DiskAnalyzer/
+baseurl=https://github.com/VinskiyL/DiskAnalyzer/releases/tag/v1.0/
 enabled=1
 gpgcheck=0
